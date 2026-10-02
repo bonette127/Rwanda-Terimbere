@@ -1,0 +1,11 @@
+{
+  "name": "Remix TERIMBERE - Smart Agriculture Platform",
+  "description": "Kinyarwanda-first smart agriculture management platform for Rwandan farmers: farm planning, expense tracking, harvests, sales, profit analytics, market prices, and AI agronomy advisor.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

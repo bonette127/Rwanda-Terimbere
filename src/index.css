@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* Unified TERIMBERE Brand Color System:
+   Primary: Rwandan Forest Emerald (#064e3b / #059669 / #10b981)
+   Secondary: Warm Harvest Gold/Amber (#d97706 / #f59e0b)
+   Neutral Surface: Warm Stone (#fafaf7 / #f5f5f4 / #1c1917)
+   Strictly harmonizes any legacy purple, indigo, violet, cyan, or blue accents to the brand palette. */
+@layer utilities {
+  .bg-purple-50, .bg-indigo-50, .bg-violet-50, .bg-blue-50, .bg-sky-50, .bg-cyan-50 {
+    background-color: #ecfdf5 !important;
+  }
+  .bg-purple-100, .bg-indigo-100, .bg-violet-100, .bg-blue-100, .bg-sky-100, .bg-cyan-100 {
+    background-color: #d1fae5 !important;
+  }
+  .bg-purple-600, .bg-indigo-600, .bg-violet-600, .bg-blue-600, .bg-sky-600, .bg-cyan-600 {
+    background-color: #047857 !important;
+  }
+  .bg-purple-700, .bg-indigo-700, .bg-violet-700, .bg-blue-700, .bg-sky-700, .bg-cyan-700 {
+    background-color: #065f46 !important;
+  }
+  .text-purple-600, .text-indigo-600, .text-violet-600, .text-blue-600, .text-sky-600, .text-cyan-600 {
+    color: #047857 !important;
+  }
+  .text-purple-700, .text-indigo-700, .text-violet-700, .text-blue-700, .text-sky-700, .text-cyan-700 {
+    color: #065f46 !important;
+  }
+  .text-purple-800, .text-indigo-800, .text-violet-800, .text-blue-800, .text-sky-800, .text-cyan-800 {
+    color: #064e3b !important;
+  }
+  .border-purple-200, .border-indigo-200, .border-violet-200, .border-blue-200, .border-sky-200, .border-cyan-200,
+  .border-purple-300, .border-indigo-300, .border-violet-300, .border-blue-300, .border-sky-300, .border-cyan-300 {
+    border-color: #a7f3d0 !important;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-harvest-label,
+  #printable-harvest-label *,
+  #official-bank-season-report,
+  #official-bank-season-report * {
+    visibility: visible;
+  }
+  #printable-harvest-label,
+  #official-bank-season-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    border: 2px solid #064e3b !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+}

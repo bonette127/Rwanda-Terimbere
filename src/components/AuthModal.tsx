@@ -298,25 +298,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsernameOrEmail("admin@terimbere.rw");
-                    setPassword("TerimbereAdmin2026!");
-                    setError(null);
-                  }}
-                  className="text-stone-500 hover:text-emerald-700 dark:hover:text-emerald-400 font-semibold flex items-center space-x-1 transition-colors"
-                >
+              <div className="flex items-center justify-between text-[11px] pt-1 text-stone-500 dark:text-stone-400">
+                <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
                   <span>
                     {language === "rw"
-                      ? "Injira nk'Umuyobozi (Admin Access)"
-                      : "Authorized Admin Credentials"}
+                      ? "Kwinjira kurinzwe ku bayobozi babifitiye uburenganzira"
+                      : "Restricted to authorized cooperative personnel only"}
                   </span>
-                </button>
-                <span className="text-[10px] text-stone-400 font-mono">
-                  admin@terimbere.rw
                 </span>
               </div>
 

@@ -97,6 +97,7 @@ export const CLEAN_SLATE_SMART_PARCELS: Farm[] = [
     soilType: "Volcanic Andosol (Rich Loam)",
     irrigationType: "irrigated",
     mainCrops: ["Ibirayi (Kinigi)", "Ibishyimbo"],
+    createdAt: "2026-01-01",
   },
   {
     id: "parcel-nyagatare-savanna",
@@ -112,6 +113,7 @@ export const CLEAN_SLATE_SMART_PARCELS: Farm[] = [
     soilType: "Ferralsol Sandy Clay Loam",
     irrigationType: "irrigated",
     mainCrops: ["Ibigori (Hybrid WH 505)", "Soya"],
+    createdAt: "2026-01-01",
   },
   {
     id: "parcel-huye-plateau",
@@ -127,6 +129,7 @@ export const CLEAN_SLATE_SMART_PARCELS: Farm[] = [
     soilType: "Humic Clay Loam",
     irrigationType: "irrigated",
     mainCrops: ["Ibishyimbo (Climbing Beans)", "Imyumbati"],
+    createdAt: "2026-01-01",
   },
 ];
 

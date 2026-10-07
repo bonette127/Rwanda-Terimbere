@@ -92,14 +92,15 @@ const generateParcelSubPlotGrid = (
   simulationPreset: "live" | "upslope_drought" | "leaching_rain" | "acidic_patch" = "live",
   cellOverrides: Record<string, Partial<SubPlotCellTelemetry>> = {}
 ): SubPlotCellTelemetry[] => {
+  const farmAlt = farm.altitudeMeters ?? farm.altitude ?? 1600;
   const baseMoisture =
     sensorReading?.moisturePercentage ??
     farm.soilMoisture ??
-    (farm.altitude >= 2000 ? 72 : farm.altitude < 1500 ? 48 : 62);
+    (farmAlt >= 2000 ? 72 : farmAlt < 1500 ? 48 : 62);
 
   const baseTemp =
     sensorReading?.soilTempC ??
-    (farm.altitude >= 2000 ? 15.8 : farm.altitude < 1500 ? 24.5 : 19.6);
+    (farmAlt >= 2000 ? 15.8 : farmAlt < 1500 ? 24.5 : 19.6);
 
   const baseEc = sensorReading?.ecDsM ?? 1.15;
   const basePh = farm.soilPh || 5.8;
@@ -113,12 +114,12 @@ const generateParcelSubPlotGrid = (
 
   // Base NPK by soil type / agroZone
   const isVolcanic =
-    farm.altitude >= 2000 ||
+    farmAlt >= 2000 ||
     farm.soilType.toLowerCase().includes("volcanic") ||
     farm.soilType.toLowerCase().includes("urutare");
   const isSavanna =
-    farm.altitude < 1500 ||
-    farm.agroZone.toLowerCase().includes("savanna");
+    farmAlt < 1500 ||
+    (farm.agroZone || "").toLowerCase().includes("savanna");
 
   const baseN = (isVolcanic ? 58 : isSavanna ? 38 : 48) + fertBoostN;
   const baseP = (isVolcanic ? 24 : isSavanna ? 18 : 22) + fertBoostP;
@@ -137,7 +138,7 @@ const generateParcelSubPlotGrid = (
 
       // Topographic slope effect: Row 0 (A) is Upslope Crest (+12m, drier, lower N), Row 3 (D) is Foot-slope (-8m, wetter)
       const slopeElevDelta = (1.5 - r) * 6 + (c - 2) * 1.5;
-      const elevationMeters = Math.round(farm.altitude + slopeElevDelta);
+      const elevationMeters = Math.round(farmAlt + slopeElevDelta);
 
       const slopeZonesEn = [
         "Upslope Crest Terrace",
@@ -552,6 +553,8 @@ const CLEAN_SLATE_SOIL_PRESETS: Farm[] = [
     mainCrops: ["Ibirayi (Kinigi)"],
     latitude: -1.4824,
     longitude: 29.5892,
+    irrigationType: "rainfed",
+    createdAt: "2026-01-01",
   },
   {
     id: "soil-ref-savanna",
@@ -570,6 +573,8 @@ const CLEAN_SLATE_SOIL_PRESETS: Farm[] = [
     mainCrops: ["Ibigori (Maize)"],
     latitude: -1.3512,
     longitude: 30.3391,
+    irrigationType: "rainfed",
+    createdAt: "2026-01-01",
   },
   {
     id: "soil-ref-plateau",
@@ -588,6 +593,8 @@ const CLEAN_SLATE_SOIL_PRESETS: Farm[] = [
     mainCrops: ["Ibishyimbo (Beans)"],
     latitude: -2.6074,
     longitude: 29.7394,
+    irrigationType: "rainfed",
+    createdAt: "2026-01-01",
   },
 ];
 
@@ -807,19 +814,23 @@ export const SoilHealthParcelMap: React.FC<SoilHealthParcelMapProps> = ({
         farmId: activeFarm.id,
         farmName: activeFarm.name,
         crop: activeFarm.mainCrops[0] || "Ibihingwa",
+        seasonCode: "2026A",
+        date: todayIso,
         applicationDate: todayIso,
-        season: "2026A",
         fertilizerType:
           selectedCell.nitrogenMgKg < 45 ? "Urea (46-0-0)" : "NPK 17-17-17",
         npkRatio: selectedCell.nitrogenMgKg < 45 ? "46-0-0" : "17-17-17",
+        nitrogenPct: selectedCell.nitrogenMgKg < 45 ? 46 : 17,
+        phosphorusPct: selectedCell.nitrogenMgKg < 45 ? 0 : 17,
+        potassiumPct: selectedCell.nitrogenMgKg < 45 ? 0 : 17,
         amountKg: recommendedKg,
         areaAppliedHa: selectedCell.areaHa,
-        method: "side_dressing",
+        rateKgPerHa: Math.round(recommendedKg / Math.max(0.01, selectedCell.areaHa)),
+        applicationMethod: "side_dressing",
         costRwf: recommendedKg * 680,
         operatorName: "Jean Bosco",
-        growthStageAtApplication: `Precision Map Zone ${selectedCell.cellId}`,
         notes: selectedCell.prescriptionEn,
-      });
+      } as any);
     }
 
     handleUpdateSelectedCellValue({
@@ -1210,7 +1221,7 @@ export const SoilHealthParcelMap: React.FC<SoilHealthParcelMapProps> = ({
                   fontSize="10"
                   fontWeight="700"
                 >
-                  ▲ UPSLOPE RIDGE ({activeFarm.altitude + 10}m ASL) • WEST → EAST SECTORS (1–5)
+                  ▲ UPSLOPE RIDGE ({(activeFarm.altitudeMeters ?? activeFarm.altitude ?? 1600) + 10}m ASL) • WEST → EAST SECTORS (1–5)
                 </text>
                 <text
                   x="648"
@@ -1265,7 +1276,7 @@ export const SoilHealthParcelMap: React.FC<SoilHealthParcelMapProps> = ({
                         fontWeight="600"
                         textAnchor="middle"
                       >
-                        {activeFarm.altitude + Math.round((1.5 - rIdx) * 6)}m
+                        {(activeFarm.altitudeMeters ?? activeFarm.altitude ?? 1600) + Math.round((1.5 - rIdx) * 6)}m
                       </text>
                     </g>
                   );
@@ -1393,7 +1404,7 @@ export const SoilHealthParcelMap: React.FC<SoilHealthParcelMapProps> = ({
                   fontSize="10"
                   fontWeight="700"
                 >
-                  ▼ VALLEY FOOT-SLOPE & CONTOUR DRAINAGE CHANNEL ({activeFarm.altitude - 9}m ASL)
+                  ▼ VALLEY FOOT-SLOPE & CONTOUR DRAINAGE CHANNEL ({(activeFarm.altitudeMeters ?? activeFarm.altitude ?? 1600) - 9}m ASL)
                 </text>
                 <text
                   x="640"

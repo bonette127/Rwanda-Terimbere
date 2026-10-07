@@ -115,6 +115,7 @@ export interface FertilizerApplicationLog {
   amountKg: number;
   areaAppliedHa: number;
   rateKgPerHa: number;
+  applicationDate?: string;
   applicationMethod: FertilizerApplicationMethod;
   growthStageApplied?: string;
   costRwf: number;
@@ -236,21 +237,27 @@ export type ProductionScale =
 export interface Farm {
   id: string;
   name: string;
+  location?: string;
   province?: string; // e.g. "Amajyaruguru", "Uburasirazuba", "Amajyepfo", "Iburengerazuba", "Umujyi wa Kigali"
   district: string;
   sector: string;
   cell?: string;
   village?: string;
   agroZone?: string; // e.g. "Birunga Volcanic Highlands", "Eastern Savanna & Plains", "Southern Central Plateau"
+  altitude?: number;
   altitudeMeters?: number; // e.g. 2240
   latitude?: number; // e.g. -1.482
   longitude?: number; // e.g. 29.589
   gpsAccuracyMeters?: number;
   gpsCapturedAt?: string;
   sizeHa: number;
+  size?: number;
   scaleTier?: ProductionScale;
   soilType: string;
-  irrigationType: "rainfed" | "irrigated" | "swamp";
+  soilMoisture?: number;
+  soilPh?: number;
+  organicMatter?: number;
+  irrigationType: "rainfed" | "irrigated" | "swamp" | string;
   mainCrops: string[];
   plantedDate?: string;
   status?: "In Progress" | "Completed" | "Planning";
@@ -347,7 +354,11 @@ export type ShiftWindowId =
   | "10:00-12:00"
   | "12:00-14:00"
   | "14:00-16:00"
-  | "16:00-18:00";
+  | "16:00-18:00"
+  | "early_morning"
+  | "mid_morning"
+  | "late_afternoon"
+  | "evening";
 
 export interface FarmActivity {
   id: string;
@@ -360,6 +371,8 @@ export interface FarmActivity {
   completedDate?: string;
   status: "pending" | "in_progress" | "completed";
   assignedTo?: string;
+  assignedWorker?: string;
+  estimatedCost?: number;
   syncStatus?: SyncStatus;
   notes?: string;
   shiftWindow?: ShiftWindowId;
@@ -480,6 +493,9 @@ export interface DailyWeatherForecast {
   dayNameFr: string; // "Aujourd'hui", "Sam", "Dim", etc.
   tempMinC: number;
   tempMaxC: number;
+  tempMin?: number;
+  tempMax?: number;
+  rainMm?: number;
   conditionRw: string;
   conditionEn: string;
   conditionFr: string;
@@ -693,7 +709,7 @@ export interface IrrigationDemandAlert {
   district: string;
   agroZone?: string;
   soilType: string;
-  irrigationType: "rainfed" | "irrigated" | "swamp";
+  irrigationType: "rainfed" | "irrigated" | "swamp" | string;
   soilMoisturePercentage: number; // 0 - 100% estimated or sensor-measured available water capacity
   thresholdPercentage: number; // Moisture trigger threshold (e.g., 35% or 40%)
   isAutomatedThresholdBreached?: boolean;

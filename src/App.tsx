@@ -95,6 +95,7 @@ import {
 import { GitHubRenderDeployModal } from "./components/GitHubRenderDeployModal";
 import { OfflineBackupModal } from "./components/OfflineBackupModal";
 import { PlantingCalendarExportModal } from "./components/PlantingCalendarExportModal";
+import { FarmWorkflowGuideModal } from "./components/FarmWorkflowGuideModal";
 import {
   OfflineBackupPayload,
   quickExportLocalOfflineJson,
@@ -168,6 +169,7 @@ export function App() {
   const [isExportReportModalOpen, setIsExportReportModalOpen] = useState<boolean>(false);
   const [isOfflineBackupModalOpen, setIsOfflineBackupModalOpen] = useState<boolean>(false);
   const [isPlantingCalendarExportOpen, setIsPlantingCalendarExportOpen] = useState<boolean>(false);
+  const [isWorkflowGuideOpen, setIsWorkflowGuideOpen] = useState<boolean>(false);
   const [shareTargetFarmId, setShareTargetFarmId] = useState<string | null>(null);
   const [simulatedMember, setSimulatedMember] = useState<TeamMember | null>(null);
   const [bgTheme, setBgTheme] = useState<"terraces" | "highlands" | "sunrise">("terraces");
@@ -1473,6 +1475,15 @@ export function App() {
         isDarkMode ? "dark bg-stone-950 text-stone-100" : "bg-[#FAFAF7] text-stone-900"
       } flex flex-col font-sans transition-colors duration-200 relative`}
     >
+      {/* Authentic Rwandan Agricultural Landscape Background Overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat transition-opacity duration-700"
+        style={{
+          backgroundImage: `url(${backgroundImages[bgTheme] || backgroundImages.terraces})`,
+          opacity: isDarkMode ? 0.04 : 0.05,
+        }}
+        aria-hidden="true"
+      />
       {/* Real-Time Push Notification Toast (Irrigation, Low-Humidity Climate & Activity Alerts) */}
       <SimulatedPushNotificationToast
         language={language}
@@ -1597,6 +1608,7 @@ export function App() {
         onOpenOfflineBackup={() => setIsOfflineBackupModalOpen(true)}
         onOpenQrScanner={() => handleOpenParcelQr(farms[0] || null, "history")}
         onOpenPlantingCalendarExport={() => setIsPlantingCalendarExportOpen(true)}
+        onOpenWorkflowGuide={() => setIsWorkflowGuideOpen(true)}
         dynamicDayState={dynamicDayState}
       />
 
@@ -1607,6 +1619,13 @@ export function App() {
           onTabChange={(tab) => setCurrentTab(tab)}
           language={language}
           currentUser={currentUser}
+          onOpenWorkflowGuide={() => setIsWorkflowGuideOpen(true)}
+          onOpenExportReport={() => setIsExportReportModalOpen(true)}
+          onOpenUssd={() => setIsUssdModalOpen(true)}
+          onOpenContact={() => setIsContactModalOpen(true)}
+          onOpenDeployModal={() => setIsDeployModalOpen(true)}
+          onOpenOfflineBackup={() => setIsOfflineBackupModalOpen(true)}
+          onOpenQrScanner={() => handleOpenParcelQr(farms[0] || null, "history")}
         />
       )}
 
@@ -1757,6 +1776,9 @@ export function App() {
                   setCurrentTab("activities");
                 }}
                 onOpenPlantingCalendarExport={() => setIsPlantingCalendarExportOpen(true)}
+                onOpenScanNewQr={() => handleOpenParcelQr(null, "qr_label")}
+                onOpenWorkflowGuide={() => setIsWorkflowGuideOpen(true)}
+                onOpenCropDoctor={() => setCurrentTab("cropDoctor")}
               />
             )}
 
@@ -2144,7 +2166,42 @@ export function App() {
         expenses={expenses}
         activities={activities}
         sales={sales}
+        hiredLabor={hiredLaborList}
+        fertilizerApplications={fertilizerApplications}
         onSelectRecordFromScan={handleSelectRecordFromScan}
+        onAddActivity={handleAddActivity}
+        onAddExpense={handleAddExpense}
+      />
+
+      {/* Seed-to-Sale Agricultural Workflow Guide Modal */}
+      <FarmWorkflowGuideModal
+        isOpen={isWorkflowGuideOpen}
+        onClose={() => setIsWorkflowGuideOpen(false)}
+        language={language}
+        onNavigateToTab={(tab) => {
+          setCurrentTab(tab as any);
+          setIsWorkflowGuideOpen(false);
+        }}
+        onOpenCropDoctor={() => {
+          setCurrentTab("cropDoctor");
+          setIsWorkflowGuideOpen(false);
+        }}
+        onOpenPlanCreator={() => {
+          setCurrentTab("plans");
+          setIsWorkflowGuideOpen(false);
+        }}
+        onOpenActivityModal={() => {
+          setCurrentTab("activities");
+          setIsWorkflowGuideOpen(false);
+        }}
+        onOpenHarvestModal={() => {
+          setCurrentTab("harvestSales");
+          setIsWorkflowGuideOpen(false);
+        }}
+        onOpenMarketPrices={() => {
+          setCurrentTab("marketWeather");
+          setIsWorkflowGuideOpen(false);
+        }}
       />
 
       {/* 9. Footer */}

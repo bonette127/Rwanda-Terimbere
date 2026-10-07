@@ -132,11 +132,12 @@ export interface AgroZoneWeatherAnalysisReport {
  */
 export const classifyAgroZoneId = (farm: Farm): AgroZoneId => {
   const z = (farm.agroZone || "").toLowerCase();
+  const alt = farm.altitudeMeters ?? farm.altitude ?? 1600;
   if (
     z.includes("volcanic") ||
     z.includes("birunga") ||
     z.includes("buberuka") ||
-    farm.altitude >= 2000
+    alt >= 2000
   ) {
     return "birunga_volcanic";
   }
@@ -145,7 +146,7 @@ export const classifyAgroZoneId = (farm: Farm): AgroZoneId => {
     z.includes("eastern") ||
     z.includes("bugesera") ||
     z.includes("mayaga") ||
-    farm.altitude < 1500
+    alt < 1500
   ) {
     return "eastern_savanna";
   }
@@ -170,17 +171,17 @@ export const getCalibratedForecastForFarmAgroZone = (
   const baseDays =
     externalForecastDays && externalForecastDays.length > 0
       ? externalForecastDays
-      : getForecastForDistrict(farm.district);
+      : getForecastForDistrict(farm.district).daily;
 
   const agroZoneId = classifyAgroZoneId(farm);
 
   return baseDays.map((day, index) => {
-    let tempMax = day.tempMax;
-    let tempMin = day.tempMin;
-    let rainMm = day.rainMm;
-    let rainChance = day.rainChance;
+    let tempMax = day.tempMax ?? day.tempMaxC;
+    let tempMin = day.tempMin ?? day.tempMinC;
+    let rainMm = day.rainMm ?? day.rainfallMm;
+    let rainChance = (day as any).rainChance ?? day.pop ?? 30;
     let humidity = day.humidity;
-    let condition = day.condition;
+    let condition = (day as any).condition ?? day.conditionEn ?? "partly_cloudy";
 
     // Apply scenario adjustments if selected for testing agroZone sensitivity
     if (scenarioId === "onset_planting_rains") {
@@ -241,23 +242,24 @@ export const computeAgroZoneWeatherMetrics = (
   const count = Math.max(1, days.length);
 
   const cumulativeRain7dMm = Math.round(
-    days.reduce((sum, d) => sum + d.rainMm, 0) * 10
+    days.reduce((sum, d) => sum + (d.rainMm ?? d.rainfallMm ?? 0), 0) * 10
   ) / 10;
-  const rainyDaysCount = days.filter((d) => d.rainMm >= 5).length;
+  const rainyDaysCount = days.filter((d) => (d.rainMm ?? d.rainfallMm ?? 0) >= 5).length;
 
   let peakRainDayMm = 0;
   let peakRainDayDate = days[0]?.date || "";
   days.forEach((d) => {
-    if (d.rainMm >= peakRainDayMm) {
-      peakRainDayMm = d.rainMm;
+    const r = d.rainMm ?? d.rainfallMm ?? 0;
+    if (r >= peakRainDayMm) {
+      peakRainDayMm = r;
       peakRainDayDate = d.date;
     }
   });
 
   const avgMaxTempC =
-    Math.round((days.reduce((s, d) => s + d.tempMax, 0) / count) * 10) / 10;
+    Math.round((days.reduce((s, d) => s + (d.tempMax ?? d.tempMaxC ?? 22), 0) / count) * 10) / 10;
   const avgMinTempC =
-    Math.round((days.reduce((s, d) => s + d.tempMin, 0) / count) * 10) / 10;
+    Math.round((days.reduce((s, d) => s + (d.tempMin ?? d.tempMinC ?? 15), 0) / count) * 10) / 10;
   const meanTempC = Math.round(((avgMaxTempC + avgMinTempC) / 2) * 10) / 10;
 
   const avgHumidityPct = Math.round(
@@ -266,8 +268,9 @@ export const computeAgroZoneWeatherMetrics = (
   const peakHumidityPct = Math.max(...days.map((d) => d.humidity));
 
   // Estimate daily leaf wetness hours from RH, rainfall, and altitude mist
+  const farmAlt = farm.altitudeMeters ?? farm.altitude ?? 1600;
   const altitudeMistBonus =
-    farm.altitude >= 2000 ? 2.2 : farm.altitude >= 1650 ? 1.1 : 0.3;
+    farmAlt >= 2000 ? 2.2 : farmAlt >= 1650 ? 1.1 : 0.3;
   const rawLeafWetness =
     (avgHumidityPct > 80
       ? 7.5 + (avgHumidityPct - 80) * 0.25
@@ -282,7 +285,7 @@ export const computeAgroZoneWeatherMetrics = (
   // Growing Degree Days (Base 10°C) over 7 days
   const growingDegreeDays7d = Math.round(
     days.reduce((sum, d) => {
-      const dailyMean = (d.tempMax + d.tempMin) / 2;
+      const dailyMean = ((d.tempMax ?? d.tempMaxC ?? 22) + (d.tempMin ?? d.tempMinC ?? 15)) / 2;
       return sum + Math.max(0, dailyMean - 10);
     }, 0)
   );
@@ -331,71 +334,76 @@ const buildDailyPlantingTimeline = (
   forecastDays: DailyWeatherForecast[]
 ): DailyPlantingWindowSlot[] => {
   return forecastDays.slice(0, 7).map((day, idx) => {
-    const nextDayRain = forecastDays[idx + 1]?.rainMm ?? day.rainMm;
+    const dayRain = day.rainMm ?? day.rainfallMm ?? 0;
+    const dayTempMax = day.tempMax ?? day.tempMaxC ?? 22;
+    const dayTempMin = day.tempMin ?? day.tempMinC ?? 15;
+    const nextDay = forecastDays[idx + 1];
+    const nextDayRain = nextDay ? (nextDay.rainMm ?? nextDay.rainfallMm ?? 0) : dayRain;
+    const farmSoilMoisture = farm.soilMoisture ?? 60;
 
     // Waterlogging / seed washout risk on steep highland or heavy storm day
     if (
-      day.rainMm >= 22 ||
-      (agroZoneId === "birunga_volcanic" && day.rainMm >= 18)
+      dayRain >= 22 ||
+      (agroZoneId === "birunga_volcanic" && dayRain >= 18)
     ) {
       return {
         date: day.date,
         dayNameRw: day.dayNameRw,
         dayNameEn: day.dayNameEn,
-        tempMax: day.tempMax,
-        tempMin: day.tempMin,
-        rainMm: day.rainMm,
+        tempMax: dayTempMax,
+        tempMin: dayTempMin,
+        rainMm: dayRain,
         humidityPct: day.humidity,
         suitability: "avoid",
         labelEn: "Avoid Sowing (Heavy Rain)",
         labelRw: "Irinde Gutera (Imvura Nyinshi)",
-        reasonEn: `${day.rainMm}mm downpour risks seed washout & tuber/seed rot in ${farm.agroZone}. Focus on drainage trenches.`,
-        reasonRw: `Imvura ya ${day.rainMm}mm ishobora gutwara imbuto cyangwa kuzibora muri ${farm.agroZone}. Sibura imiferege.`,
+        reasonEn: `${dayRain}mm downpour risks seed washout & tuber/seed rot in ${farm.agroZone}. Focus on drainage trenches.`,
+        reasonRw: `Imvura ya ${dayRain}mm ishobora gutwara imbuto cyangwa kuzibora muri ${farm.agroZone}. Sibura imiferege.`,
       };
     }
 
     // Extreme heat / dry topsoil risk
     if (
-      day.tempMax >= 31 &&
-      day.rainMm < 3 &&
+      dayTempMax >= 31 &&
+      dayRain < 3 &&
       nextDayRain < 4 &&
-      farm.soilMoisture < 52
+      farmSoilMoisture < 52
     ) {
       return {
         date: day.date,
         dayNameRw: day.dayNameRw,
         dayNameEn: day.dayNameEn,
-        tempMax: day.tempMax,
-        tempMin: day.tempMin,
-        rainMm: day.rainMm,
+        tempMax: dayTempMax,
+        tempMin: dayTempMin,
+        rainMm: dayRain,
         humidityPct: day.humidity,
         suitability: "caution",
         labelEn: "Dry Topsoil — Pre-Irrigate / Wait",
         labelRw: "Ubutaka bwumye —uhira cyangwa tegereza",
-        reasonEn: `High ${day.tempMax}°C heat & ${day.rainMm}mm rain in ${farm.agroZone} causes poor germination without furrow pre-watering.`,
-        reasonRw: `Ubushyuhe bwa ${day.tempMax}°C n'imvura nke (${day.rainMm}mm) bibangamira kumera kw'imbuto utabanje kuhira.`,
+        reasonEn: `High ${dayTempMax}°C heat & ${dayRain}mm rain in ${farm.agroZone} causes poor germination without furrow pre-watering.`,
+        reasonRw: `Ubushyuhe bwa ${dayTempMax}°C n'imvura nke (${dayRain}mm) bibangamira kumera kw'imbuto utabanje kuhira.`,
       };
     }
 
     // Optimal sowing window: moderate rain (4–16mm) or day right before/after moderate rain with good soil moisture
     if (
-      (day.rainMm >= 4 && day.rainMm <= 17) ||
-      (day.rainMm < 6 && nextDayRain >= 5 && nextDayRain <= 18) ||
-      (farm.soilMoisture >= 58 && day.rainMm <= 14 && day.tempMax <= 29)
+      (dayRain >= 4 && dayRain <= 17) ||
+      (dayRain < 6 && nextDayRain >= 5 && nextDayRain <= 18) ||
+      (farmSoilMoisture >= 58 && dayRain <= 14 && dayTempMax <= 29)
     ) {
       return {
         date: day.date,
         dayNameRw: day.dayNameRw,
         dayNameEn: day.dayNameEn,
-        tempMax: day.tempMax,
-        tempMin: day.tempMin,
-        rainMm: day.rainMm,
+        tempMax: dayTempMax,
+        tempMin: dayTempMin,
+        rainMm: dayRain,
         humidityPct: day.humidity,
         suitability: "optimal",
         labelEn: "Optimal Planting Window",
         labelRw: "Igihe Cyiza Cyo Gutera",
-        reasonEn: `Ideal soil moisture & ${day.tempMax}°C/${day.tempMin}°C thermal regime (${day.rainMm}mm rain) for rapid emergence in ${farm.agroZone}.`,
-        reasonRw: `Ubuhehere bw'ubutaka bukwiye n'ubushyuhe bwa ${day.tempMax}°C/${day.tempMin}°C (${day.rainMm}mm) bifasha imbuto kumera neza.`,
+        reasonEn: `Ideal soil moisture & ${dayTempMax}°C/${dayTempMin}°C thermal regime (${dayRain}mm rain) for rapid emergence in ${farm.agroZone}.`,
+        reasonRw: `Ubuhehere bw'ubutaka bukwiye n'ubushyuhe bwa ${dayTempMax}°C/${dayTempMin}°C (${dayRain}mm) bifasha imbuto kumera neza.`,
       };
     }
 
@@ -403,15 +411,15 @@ const buildDailyPlantingTimeline = (
       date: day.date,
       dayNameRw: day.dayNameRw,
       dayNameEn: day.dayNameEn,
-      tempMax: day.tempMax,
-      tempMin: day.tempMin,
-      rainMm: day.rainMm,
+      tempMax: dayTempMax,
+      tempMin: dayTempMin,
+      rainMm: dayRain,
       humidityPct: day.humidity,
       suitability: "good",
       labelEn: "Good for Ridging & Basal NPK",
       labelRw: "Gutegura Imirama n'Ifumbire",
-      reasonEn: `Favorable field workability (${day.rainMm}mm rain, ${day.tempMax}°C) for seedbed preparation and basal manure incorporation.`,
-      reasonRw: `Ikirere cyiza (${day.rainMm}mm, ${day.tempMax}°C) cyo gutegura umurima no gushyiramo ifumbire y'ibanze.`,
+      reasonEn: `Favorable field workability (${dayRain}mm rain, ${dayTempMax}°C) for seedbed preparation and basal manure incorporation.`,
+      reasonRw: `Ikirere cyiza (${dayRain}mm, ${dayTempMax}°C) cyo gutegura umurima no gushyiramo ifumbire y'ibanze.`,
     };
   });
 };
@@ -489,7 +497,7 @@ const buildCropPlantingRecommendations = (
     // 2. Maize (Ibigori) - Eastern Savanna / Plateau specialization
     if (cLower.includes("ibigori") || cLower.includes("maize") || cLower.includes("corn")) {
       const tooDry =
-        metrics.cumulativeRain7dMm < 15 && farm.soilMoisture < 52;
+        metrics.cumulativeRain7dMm < 15 && (farm.soilMoisture ?? 60) < 52;
       const readinessStatus: PlantingReadinessStatus = tooDry
         ? "caution_wait_rain"
         : optimalSlots.length >= 2
@@ -617,8 +625,12 @@ const selectOptimalSprayDay = (
 ): DailyWeatherForecast => {
   const sorted = [...forecastDays].sort((a, b) => {
     // Prefer rainMm <= 4 and moderate humidity
-    const scoreA = a.rainMm * 3 + (a.tempMax > 30 ? 15 : 0);
-    const scoreB = b.rainMm * 3 + (b.tempMax > 30 ? 15 : 0);
+    const rainA = a.rainMm ?? a.rainfallMm ?? 0;
+    const rainB = b.rainMm ?? b.rainfallMm ?? 0;
+    const maxA = a.tempMax ?? a.tempMaxC ?? 22;
+    const maxB = b.tempMax ?? b.tempMaxC ?? 22;
+    const scoreA = rainA * 3 + (maxA > 30 ? 15 : 0);
+    const scoreB = rainB * 3 + (maxB > 30 ? 15 : 0);
     return scoreA - scoreB;
   });
   return sorted[0] || forecastDays[0];
@@ -1105,8 +1117,8 @@ export const analyzeAgroZoneWeatherForFarm = (
     farmName: farm.name,
     district: farm.district,
     sector: farm.sector,
-    altitude: farm.altitude,
-    agroZone: farm.agroZone,
+    altitude: farm.altitude || farm.altitudeMeters || 2200,
+    agroZone: farm.agroZone || "Birunga Volcanic Highlands",
     agroZoneId,
     elevationBandLabel,
     agroZoneCharacteristicsEn,

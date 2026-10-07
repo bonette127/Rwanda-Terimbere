@@ -139,13 +139,13 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Streamlined Right Controls */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
             {/* GitHub & Render Cloud Deployment Guide Button */}
             {onOpenDeployModal && (
               <button
                 type="button"
                 onClick={onOpenDeployModal}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-600 text-white border border-teal-500/50 transition-colors shadow-2xs cursor-pointer"
+                className="hidden xl:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-600 text-white border border-teal-500/50 transition-colors shadow-2xs cursor-pointer"
                 title={
                   language === "rw"
                     ? "Kubika kuri GitHub & Kohereza kuri Render"
@@ -153,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }
               >
                 <Cloud className="w-3.5 h-3.5 text-amber-300" />
-                <span className="hidden sm:inline">
+                <span>
                   {language === "rw" ? "GitHub & Render" : "GitHub & Render"}
                 </span>
               </button>
@@ -164,7 +164,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenOfflineBackup}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-950/90 hover:bg-emerald-800 text-amber-300 border border-amber-500/40 transition-colors shadow-2xs cursor-pointer"
+                className="hidden xl:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-950/90 hover:bg-emerald-800 text-amber-300 border border-amber-500/40 transition-colors shadow-2xs cursor-pointer"
                 title={
                   language === "rw"
                     ? "Bika Amakuru ya Offline mu Idosiye ya JSON (Expenses, Harvests, Activities)"
@@ -172,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }
               >
                 <HardDriveDownload className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden md:inline">
+                <span>
                   {language === "rw" ? "JSON Backup" : "Offline JSON"}
                 </span>
               </button>
@@ -183,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={handleExportTrigger}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-stone-950 transition-colors shadow-2xs cursor-pointer"
+                className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-stone-950 transition-colors shadow-2xs cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>
@@ -202,10 +202,10 @@ export const Header: React.FC<HeaderProps> = ({
                     ? "Urugendo rw'Umuhinzi kuva ku Butaka kugeza ku Isoko (Intambwe 6)"
                     : "Farmer Seed-to-Sale Workflow Guide (6 Steps)"
                 }
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs transition-all shadow-xs cursor-pointer active:scale-95"
+                className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs transition-all shadow-xs cursor-pointer active:scale-95"
               >
                 <Compass className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">
+                <span>
                   {language === "rw" ? "Urugendo rw'Umuhinzi" : "Workflow Guide"}
                 </span>
               </button>

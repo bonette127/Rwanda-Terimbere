@@ -43,6 +43,7 @@ import {
   LayoutGrid,
   Calendar,
   FlaskConical,
+  QrCode,
 } from "lucide-react";
 import { NavTab } from "./Navigation";
 import { DailyAdviceWidget } from "./DailyAdviceWidget";
@@ -62,6 +63,7 @@ import { SoilHealthParcelMap } from "./SoilHealthParcelMap";
 import { WeatherForecastWidget } from "./WeatherForecastWidget";
 import { PestOutbreakHeatmap } from "./PestOutbreakHeatmap";
 import { GrowthCycleTimeline } from "./GrowthCycleTimeline";
+import { DailyFarmGoalsCard } from "./DailyFarmGoalsCard";
 import { evaluateActivityAlerts } from "../utils/activityAlerts";
 import {
   DEFAULT_CROP_VARIETY_IRRIGATION_RULES,
@@ -132,6 +134,9 @@ interface DashboardViewProps {
     dateStr?: string;
   }) => void;
   onOpenPlantingCalendarExport?: () => void;
+  onOpenScanNewQr?: () => void;
+  onOpenWorkflowGuide?: () => void;
+  onOpenCropDoctor?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -177,6 +182,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDeleteActivity,
   onNavigateToActivityLog,
   onOpenPlantingCalendarExport,
+  onOpenScanNewQr,
+  onOpenWorkflowGuide,
+  onOpenCropDoctor,
 }) => {
   const t = getTranslation(language);
   const [dashboardSection, setDashboardSection] = useState<
@@ -482,6 +490,151 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <p className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-1 font-mono tabular-nums">
             ROI: {roi}% · {language === "rw" ? "Kuramo Raporo →" : "Export Report →"}
           </p>
+        </div>
+      </div>
+
+      {/* 2.5 Daily Farm Goals Module (Progress Ring & Quick Checklist) */}
+      <DailyFarmGoalsCard
+        language={language}
+        onNavigate={onNavigate}
+        onOpenCropDoctor={onOpenCropDoctor || (() => onNavigate("cropDoctor"))}
+        onOpenScanNewQr={onOpenScanNewQr}
+      />
+
+      {/* 2.6 Seed-to-Outcome Agricultural Workflow Overview Card */}
+      <div className="bg-white dark:bg-stone-900 rounded-3xl p-5 sm:p-6 border border-stone-200 dark:border-stone-800 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 flex items-center justify-center font-black text-sm shrink-0 border border-amber-300/50 dark:border-amber-800/50">
+              🌱
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                  {language === "rw" ? "Urugendo rw'Umuhinzi" : "Farmer Roadmap"}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  6 {language === "rw" ? "Intambwe" : "Steps"}
+                </span>
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-stone-900 dark:text-white">
+                {language === "rw"
+                  ? "Uko Ihinga Rigenda: Kuva Gutera Kugeza ku Musaruro n'Isoko"
+                  : "Seed-to-Outcome Agricultural Workflow: Planting to Market Sales"}
+              </h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                {language === "rw"
+                  ? "Inzira yoroshye kandi isobanutse buri muhinzi akurikiza kugira ngo ahinge neza yongere umusaruro"
+                  : "A clear, visual step-by-step pathway mapped out from soil preparation to cooperative market sale"}
+              </p>
+            </div>
+          </div>
+
+          {onOpenWorkflowGuide && (
+            <button
+              type="button"
+              onClick={onOpenWorkflowGuide}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-[#064E3B] hover:bg-emerald-800 shadow-xs transition-colors shrink-0 cursor-pointer"
+            >
+              <span>
+                {language === "rw"
+                  ? "Fungura Inzira Yose y'Ihinga"
+                  : "Open Full Visual Guide"}
+              </span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* 6 Visual Stages Progression Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
+          {[
+            {
+              step: 1,
+              icon: "🌱",
+              titleRw: "1. Ubutaka & pH",
+              titleEn: "1. Land Prep",
+              descRw: "Guhirika 30cm & imborera",
+              descEn: "Deep till 30cm & cured manure",
+              badge: "15-30d",
+              color: "border-amber-200 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20",
+            },
+            {
+              step: 2,
+              icon: "🌿",
+              titleRw: "2. Gutera Imbuto",
+              titleEn: "2. Certified Seed",
+              descRw: "Imbuto yemejwe & intera",
+              descEn: "RAB certified seeds & spacing",
+              badge: "Day 0",
+              color: "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20",
+            },
+            {
+              step: 3,
+              icon: "💧",
+              titleRw: "3. Kuhira & Kubagara",
+              titleEn: "3. Irrigation Care",
+              descRw: "Ubuhehere & kubagara kare",
+              descEn: "Solar drip & timely weeding",
+              badge: "Wk 2-8",
+              color: "border-sky-200 dark:border-sky-800/60 bg-sky-50/50 dark:bg-sky-950/20",
+            },
+            {
+              step: 4,
+              icon: "🧪",
+              titleRw: "4. Ifumbire & Udukoko",
+              titleEn: "4. Crop Doctor",
+              descRw: "NPK & kurwanya indwara",
+              descEn: "Growth NPK & pest defense",
+              badge: "Wk 4-12",
+              color: "border-teal-200 dark:border-teal-800/60 bg-teal-50/50 dark:bg-teal-950/20",
+            },
+            {
+              step: 5,
+              icon: "🌾",
+              titleRw: "5. Isarura & Icyiciro",
+              titleEn: "5. Harvesting",
+              descRw: "Gusarura neza & Grade A",
+              descEn: "Moisture test & grading",
+              badge: "Day 90+",
+              color: "border-amber-300/80 dark:border-amber-700/60 bg-amber-100/40 dark:bg-amber-900/20",
+            },
+            {
+              step: 6,
+              icon: "💰",
+              titleRw: "6. Isoko & Inyungu",
+              titleEn: "6. Cooperative Sale",
+              descRw: "Koperative, QR & inyungu",
+              descEn: "Buyer sale, QR & digital receipt",
+              badge: "Outcome",
+              color: "border-emerald-300 dark:border-emerald-700/60 bg-emerald-100/40 dark:bg-emerald-900/30",
+            },
+          ].map((stage) => (
+            <div
+              key={stage.step}
+              onClick={onOpenWorkflowGuide}
+              className={`p-3 rounded-2xl border ${stage.color} hover:scale-[1.02] transition-transform cursor-pointer flex flex-col justify-between space-y-2`}
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xl">{stage.icon}</span>
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-stone-200/70 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
+                    {stage.badge}
+                  </span>
+                </div>
+                <h4 className="text-xs font-black text-stone-900 dark:text-white mt-1.5 truncate">
+                  {language === "rw" ? stage.titleRw : stage.titleEn}
+                </h4>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-snug mt-0.5 line-clamp-2">
+                  {language === "rw" ? stage.descRw : stage.descEn}
+                </p>
+              </div>
+              <div className="pt-1 flex items-center gap-1 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                <span>{language === "rw" ? "Reba birambuye" : "Details"}</span>
+                <ArrowRight className="w-3 h-3" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -1196,6 +1349,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           />
         </div>
       )}
+      {/* Floating 'Scan New QR' button (Bottom-Right Corner) */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          type="button"
+          onClick={() => {
+            if (onOpenScanNewQr) {
+              onOpenScanNewQr();
+            }
+          }}
+          aria-label={language === "rw" ? "Sikana QR Nshya" : "Scan New QR"}
+          className="group flex items-center gap-2.5 px-4 py-3.5 rounded-full bg-linear-to-r from-emerald-800 via-[#064E3B] to-emerald-900 hover:from-emerald-700 hover:to-emerald-800 text-white font-black shadow-2xl shadow-emerald-950/50 border border-emerald-400/40 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+        >
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400" />
+          </span>
+          <QrCode className="w-5 h-5 text-amber-300 group-hover:rotate-12 transition-transform" />
+          <span className="text-xs sm:text-sm font-extrabold tracking-wide pr-1">
+            {language === "rw" ? "Sikana QR Nshya" : "Scan New QR"}
+          </span>
+        </button>
+      </div>
     </div>
   );
 };

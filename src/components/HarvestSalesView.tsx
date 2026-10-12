@@ -381,7 +381,11 @@ export const HarvestSalesView: React.FC<HarvestSalesViewProps> = ({
             className="flex items-center justify-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300/80 dark:border-amber-800 font-bold text-xs sm:text-sm transition-all shadow-xs active:scale-95 cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>{language === "rw" ? "Injiza CSV" : "Import CSV"}</span>
+            <span>
+              {activeTab === "harvests"
+                ? (language === "rw" ? "Injiza Umusaruro (CSV)" : "Import Harvests (CSV)")
+                : (language === "rw" ? "Injiza Ubucuruzi (CSV)" : "Import Sales (CSV)")}
+            </span>
           </button>
           {harvests.length > 0 && (
             <button
@@ -628,8 +632,29 @@ export const HarvestSalesView: React.FC<HarvestSalesViewProps> = ({
       {activeTab === "harvests" && (
         <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-2xs overflow-hidden">
           {harvests.length === 0 ? (
-            <div className="p-12 text-center text-stone-400 text-sm">
-              Nta musaruro urandikwa. Kanda kuri "Andika Umusaruro" kugira ngo ushyiremo mushya.
+            <div className="p-12 text-center text-stone-400 text-sm space-y-3">
+              <p>
+                {language === "rw"
+                  ? "Nta musaruro urandikwa. Kanda kuri \"Andika Umusaruro\" cyangwa uzane dosiye ya CSV (Bulk Import)."
+                  : "No harvest records yet. Record a harvest or bulk import from CSV."}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsHarvestModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                >
+                  {t.recordHarvest}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCsvModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs transition-colors cursor-pointer flex items-center space-x-1.5"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{language === "rw" ? "Injiza Umusaruro (CSV)" : "Import Harvests (CSV)"}</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -786,8 +811,29 @@ export const HarvestSalesView: React.FC<HarvestSalesViewProps> = ({
       {activeTab === "sales" && (
         <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-2xs overflow-hidden">
           {sales.length === 0 ? (
-            <div className="p-12 text-center text-stone-400 text-sm">
-              Nta kintu kiragurishwa muri iki gihembwe.
+            <div className="p-12 text-center text-stone-400 text-sm space-y-3">
+              <p>
+                {language === "rw"
+                  ? "Nta kintu kiragurishwa muri iki gihembwe. Kanda kuri \"Andika Igicuruzwa\" cyangwa uzane dosiye ya CSV."
+                  : "No sales records yet. Record a sale or bulk import from CSV."}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSaleModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  {t.recordSale}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCsvModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs transition-colors cursor-pointer flex items-center space-x-1.5"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{language === "rw" ? "Injiza Ubucuruzi (CSV)" : "Import Sales (CSV)"}</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1319,6 +1365,7 @@ export const HarvestSalesView: React.FC<HarvestSalesViewProps> = ({
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
         mode="harvest_sales"
+        initialSubMode={activeTab}
         farms={farms}
         language={language}
         onImportSales={(importedSales) => {

@@ -2211,7 +2211,7 @@ export function App() {
         onOpenAuth={() => setIsAuthModalOpen(true)}
         isAdmin={currentUser?.role === "admin"}
         onOpenShare={() => setIsShareModalOpen(true)}
-        onNavigate={(tab) => setCurrentTab(tab)}
+        onNavigate={(tab) => setCurrentTab(tab as any)}
         onOpenExportReport={() => setIsExportReportModalOpen(true)}
         onOpenUssd={() => setIsUssdModalOpen(true)}
       />

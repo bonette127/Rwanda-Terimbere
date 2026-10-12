@@ -166,7 +166,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
             className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300/80 dark:border-amber-800 font-bold text-xs sm:text-sm transition-all shadow-xs active:scale-95 cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>{language === "rw" ? "Injiza CSV ya MoMo" : "Import CSV"}</span>
+            <span>{language === "rw" ? "Kwinjiza CSV (Bulk Expenses)" : "Import CSV (Bulk Expenses)"}</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -271,8 +271,29 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
       {/* Expenses Table */}
       <div className="bg-white rounded-2xl border border-stone-200 shadow-2xs overflow-hidden">
         {filteredExpenses.length === 0 ? (
-          <div className="p-12 text-center text-stone-400 text-sm">
-            Nta mafaranga yakoreshejwe ahuye n'ibyo wahisemo.
+          <div className="p-12 text-center text-stone-400 text-sm space-y-3">
+            <p>
+              {language === "rw"
+                ? "Nta mafaranga yakoreshejwe ahuye n'ibyo wahisemo. Shyiramo ikindi cyangwa winjize dosiye ya CSV."
+                : "No expenses found matching the filter. Add a new expense or bulk import via CSV."}
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                {t.addExpense}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCsvModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs transition-colors cursor-pointer flex items-center space-x-1.5"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-amber-600" />
+                <span>{language === "rw" ? "Kwinjiza CSV (Bulk Import)" : "Bulk Import Expenses (CSV)"}</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">

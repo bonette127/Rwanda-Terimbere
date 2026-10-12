@@ -168,7 +168,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       farmSizeHa: parseFloat(regSize) || 0.5,
       primaryCrop: regCrop,
       verified: true,
-      nationalId: cleanNid.length === 16 ? cleanNid : undefined,
+      nationalId: cleanNid.length === 16 ? cleanNid : "",
       nidVerified: cleanNid.length === 16,
       createdAt: new Date().toISOString().split("T")[0],
     };
@@ -295,6 +295,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <Eye className="w-4 h-4" />
                     )}
                   </button>
+                </div>
+              </div>
+
+              {/* Master Administrator Credentials Quick-Fill Card for System Control Access */}
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-900 dark:text-amber-200">
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>
+                      {language === "rw"
+                        ? "Umuyobozi Mukuru (Master Admin Control):"
+                        : "System Control Center / Admin Access:"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsernameOrEmail("admin");
+                      setPassword("TerimbereAdmin2026!");
+                    }}
+                    className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors cursor-pointer shadow-2xs"
+                  >
+                    {language === "rw" ? "Koresha Ibi (Auto-Fill)" : "Click to Auto-Fill"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono bg-white dark:bg-stone-900 p-2 rounded-lg border border-amber-200/60 dark:border-amber-900/40">
+                  <div>
+                    <span className="text-stone-400 block text-[10px]">User:</span>
+                    <strong className="text-stone-800 dark:text-stone-200 select-all">admin</strong>
+                  </div>
+                  <div>
+                    <span className="text-stone-400 block text-[10px]">Password:</span>
+                    <strong className="text-stone-800 dark:text-stone-200 select-all">TerimbereAdmin2026!</strong>
+                  </div>
                 </div>
               </div>
 

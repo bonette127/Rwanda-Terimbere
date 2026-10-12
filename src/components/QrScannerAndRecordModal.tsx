@@ -456,6 +456,7 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
   const [previewPdfBlobUrl, setPreviewPdfBlobUrl] = useState<string | null>(null);
   const [previewItems, setPreviewItems] = useState<QrScanHistoryEntry[]>([]);
   const [previewTotalPages, setPreviewTotalPages] = useState<number>(1);
+  const [isPreviewSingleSheet, setIsPreviewSingleSheet] = useState<boolean>(false);
   const [previewActiveTab, setPreviewActiveTab] = useState<"document" | "interactive">("document");
   const [previewPageNumber, setPreviewPageNumber] = useState<number>(1);
   const [previewQrDataUrls, setPreviewQrDataUrls] = useState<Record<string, string>>({});
@@ -2178,11 +2179,20 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
   // Generate a single PDF document containing all selected QR codes for batch printing
   const generateBatchQrPdf = async (
     itemsToPrint: QrScanHistoryEntry[],
-    openPreview: boolean = true
+    openPreview: boolean = true,
+    forceSingleSheet: boolean = false
   ) => {
     if (itemsToPrint.length === 0) return;
     setIsGeneratingBatchPdf(true);
-    setBatchPdfProgress(language === "rw" ? "Gutegura impapuro za PDF..." : "Initializing Batch PDF layout...");
+    setBatchPdfProgress(
+      forceSingleSheet
+        ? language === "rw"
+          ? "Gutegura urupapuro rumwe rwa PDF..."
+          : "Formatting Single Printable PDF Sheet..."
+        : language === "rw"
+        ? "Gutegura impapuro za PDF..."
+        : "Initializing Batch PDF layout..."
+    );
 
     try {
       const doc = new jsPDF({
@@ -2195,11 +2205,82 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
       const pageHeight = 297;
       const marginX = 10;
       const marginY = 12;
-      const cardWidth = 92;
-      const cardHeight = 85;
-      const gapX = 6;
-      const gapY = 6;
-      const cardsPerPage = 6;
+
+      // Layout parameters: standard 2x3 grid or dynamic single-sheet fit
+      let totalCols = 2;
+      let totalRows = 3;
+      let cardWidth = 92;
+      let cardHeight = 85;
+      let qrSize = 36;
+      let gapX = 6;
+      let gapY = 6;
+      let cardsPerPage = 6;
+
+      if (forceSingleSheet) {
+        cardsPerPage = itemsToPrint.length;
+        if (itemsToPrint.length <= 2) {
+          totalCols = itemsToPrint.length === 1 ? 1 : 2;
+          totalRows = 1;
+          cardWidth = itemsToPrint.length === 1 ? 170 : 92;
+          cardHeight = 110;
+          qrSize = 46;
+        } else if (itemsToPrint.length <= 4) {
+          totalCols = 2;
+          totalRows = 2;
+          cardWidth = 92;
+          cardHeight = 112;
+          gapY = 5;
+          qrSize = 40;
+        } else if (itemsToPrint.length <= 6) {
+          totalCols = 2;
+          totalRows = 3;
+          cardWidth = 92;
+          cardHeight = 80;
+          gapY = 4;
+          qrSize = 34;
+        } else if (itemsToPrint.length <= 8) {
+          totalCols = 2;
+          totalRows = 4;
+          cardWidth = 92;
+          cardHeight = 59;
+          gapY = 3.5;
+          qrSize = 27;
+        } else if (itemsToPrint.length <= 12) {
+          totalCols = 3;
+          totalRows = Math.ceil(itemsToPrint.length / 3);
+          gapX = 4;
+          gapY = 3.5;
+          cardWidth = 60;
+          cardHeight = 58;
+          qrSize = 24;
+        } else {
+          totalCols = 3;
+          totalRows = Math.ceil(itemsToPrint.length / 3);
+          gapX = 4;
+          gapY = 3;
+          cardWidth = 60;
+          cardHeight = Math.min(58, Math.floor((pageHeight - 22 - marginY - 10) / totalRows));
+          qrSize = 22;
+        }
+
+        // Draw top sheet header banner for single sheet export
+        doc.setFillColor(6, 78, 59); // emerald-900
+        doc.roundedRect(marginX, 7, pageWidth - marginX * 2, 11, 2, 2, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.text("TERIMBERE AGRI-TRACK · RWANDA NATIONAL AGRICULTURAL PLATFORM", marginX + 3.5, 12.2);
+        doc.setFontSize(6.5);
+        doc.setFont("helvetica", "normal");
+        doc.text(
+          `Single Printable QR Traceability Sheet · ${itemsToPrint.length} Selected Scanned Item${itemsToPrint.length > 1 ? "s" : ""} · Exported ${new Date().toLocaleDateString()}`,
+          marginX + 3.5,
+          15.8
+        );
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(251, 191, 36); // amber-400
+        doc.text("COOPERATIVE / MINAGRI VERIFIED", pageWidth - marginX - 3.5, 13.5, { align: "right" });
+      }
 
       for (let i = 0; i < itemsToPrint.length; i++) {
         const item = itemsToPrint[i];
@@ -2209,18 +2290,19 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
             : `Generating QR card ${i + 1} of ${itemsToPrint.length}...`
         );
 
-        const pageIndex = Math.floor(i / cardsPerPage);
-        const cardOnPageIndex = i % cardsPerPage;
+        const pageIndex = forceSingleSheet ? 0 : Math.floor(i / cardsPerPage);
+        const cardOnPageIndex = forceSingleSheet ? i : i % cardsPerPage;
 
-        if (cardOnPageIndex === 0 && pageIndex > 0) {
+        if (!forceSingleSheet && cardOnPageIndex === 0 && pageIndex > 0) {
           doc.addPage();
         }
 
-        const col = cardOnPageIndex % 2;
-        const row = Math.floor(cardOnPageIndex / 2);
+        const col = cardOnPageIndex % totalCols;
+        const row = Math.floor(cardOnPageIndex / totalCols);
 
+        const startY = forceSingleSheet ? 22 : marginY;
         const cardX = marginX + col * (cardWidth + gapX);
-        const cardY = marginY + row * (cardHeight + gapY);
+        const cardY = startY + row * (cardHeight + gapY);
 
         // Cutting guideline (dashed border)
         doc.setDrawColor(180, 180, 180);
@@ -2231,16 +2313,17 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
         // Card header banner
         const isParcel = item.type === "parcel";
         doc.setFillColor(isParcel ? 6 : 217, isParcel ? 78 : 119, isParcel ? 59 : 6);
-        doc.rect(cardX, cardY, cardWidth, 10, "F");
+        const bannerHeight = cardHeight < 70 ? 7.5 : 10;
+        doc.rect(cardX, cardY, cardWidth, bannerHeight, "F");
 
         doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.text("TERIMBERE AGRI-TRACK · RWANDA", cardX + 4, cardY + 6.8);
+        doc.setFontSize(cardWidth < 70 ? 6.5 : 8);
+        doc.text("TERIMBERE AGRI-TRACK · RWANDA", cardX + 3.5, cardY + (cardHeight < 70 ? 5.2 : 6.8));
 
         const typeBadge = isParcel ? "PARCEL SIGNPOST" : "HARVEST BATCH";
-        doc.setFontSize(7);
-        doc.text(typeBadge, cardX + cardWidth - 4, cardY + 6.8, { align: "right" });
+        doc.setFontSize(cardWidth < 70 ? 5.5 : 7);
+        doc.text(typeBadge, cardX + cardWidth - 3.5, cardY + (cardHeight < 70 ? 5.2 : 6.8), { align: "right" });
 
         // Generate QR code data URL
         const qrUrl = buildDeepLinkUrl(item.type, item.recordId);
@@ -2251,63 +2334,72 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
         });
 
         // Place QR code image
-        const qrSize = 36;
-        doc.addImage(qrDataUrl, "PNG", cardX + 3.5, cardY + 13, qrSize, qrSize);
+        const qrOffsetY = bannerHeight + 2;
+        doc.addImage(qrDataUrl, "PNG", cardX + 3, cardY + qrOffsetY, qrSize, qrSize);
 
         // Text details next to QR
-        const textX = cardX + 42;
+        const textX = cardX + qrSize + 6;
+        const availTextWidth = Math.max(30, cardWidth - qrSize - 9);
         doc.setTextColor(20, 20, 20);
 
         // Record ID
         doc.setFont("courier", "bold");
-        doc.setFontSize(8);
-        doc.text(`ID: ${item.recordId}`, textX, cardY + 17);
+        doc.setFontSize(cardHeight < 70 ? 6.5 : 8);
+        doc.text(`ID: ${item.recordId}`, textX, cardY + qrOffsetY + (cardHeight < 70 ? 3.5 : 5));
 
         // Title
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(8.5);
-        const splitTitle = doc.splitTextToSize(item.title, 46);
-        doc.text(splitTitle.slice(0, 2), textX, cardY + 22);
+        doc.setFontSize(cardHeight < 70 ? 7 : 8.5);
+        const splitTitle = doc.splitTextToSize(item.title, availTextWidth);
+        doc.text(splitTitle.slice(0, 2), textX, cardY + qrOffsetY + (cardHeight < 70 ? 7.5 : 10.5));
 
         // Subtitle / Location
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
+        doc.setFontSize(cardHeight < 70 ? 6 : 7.5);
         doc.setTextColor(70, 70, 70);
-        const splitSub = doc.splitTextToSize(item.subtitle, 46);
-        doc.text(splitSub.slice(0, 2), textX, cardY + 30);
+        const splitSub = doc.splitTextToSize(item.subtitle, availTextWidth);
+        doc.text(splitSub.slice(0, 2), textX, cardY + qrOffsetY + (cardHeight < 70 ? 14 : 18.5));
 
         // Metrics
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
+        doc.setFontSize(cardHeight < 70 ? 5.8 : 7);
         doc.setTextColor(5, 150, 105);
-        const splitMetrics = doc.splitTextToSize(item.metricsLine, 46);
-        doc.text(splitMetrics.slice(0, 2), textX, cardY + 38);
+        const splitMetrics = doc.splitTextToSize(item.metricsLine, availTextWidth);
+        doc.text(splitMetrics.slice(0, 2), textX, cardY + qrOffsetY + (cardHeight < 70 ? 20.5 : 26));
 
-        // Verification box below QR
-        doc.setFillColor(248, 250, 252);
-        doc.rect(cardX + 3.5, cardY + 52, cardWidth - 7, 24, "F");
+        // Verification box below QR if card height allows, otherwise a compact line
+        if (cardHeight >= 75) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(cardX + 3.5, cardY + 52, cardWidth - 7, 24, "F");
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
-        doc.setTextColor(30, 41, 59);
-        doc.text("Official Digital Traceability & Provenance QR", cardX + 6, cardY + 57);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(7);
+          doc.setTextColor(30, 41, 59);
+          doc.text("Official Digital Traceability & Provenance QR", cardX + 6, cardY + 57);
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(6.5);
-        doc.setTextColor(100, 116, 139);
-        doc.text("Scan using camera to view verified soil tests, fertilizer", cardX + 6, cardY + 61.5);
-        doc.text("logs, harvest batches, and cooperative bank dossiers.", cardX + 6, cardY + 65.5);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(6.5);
+          doc.setTextColor(100, 116, 139);
+          doc.text("Scan using camera to view verified soil tests, fertilizer", cardX + 6, cardY + 61.5);
+          doc.text("logs, harvest batches, and cooperative bank dossiers.", cardX + 6, cardY + 65.5);
 
-        doc.setFont("courier", "normal");
-        doc.setFontSize(6);
-        doc.setTextColor(148, 163, 184);
-        doc.text(`Time: ${item.scannedTimeDisplay}`, cardX + 6, cardY + 71);
+          doc.setFont("courier", "normal");
+          doc.setFontSize(6);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`Time: ${item.scannedTimeDisplay}`, cardX + 6, cardY + 71);
 
-        // Bottom footer of card
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(6);
-        doc.setTextColor(100, 116, 139);
-        doc.text("MINAGRI / RAB / COOPERATIVE AUTHENTICATED", cardX + cardWidth - 6, cardY + 81, { align: "right" });
+          // Bottom footer of card
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(6);
+          doc.setTextColor(100, 116, 139);
+          doc.text("MINAGRI / RAB / COOPERATIVE AUTHENTICATED", cardX + cardWidth - 6, cardY + 81, { align: "right" });
+        } else {
+          // Compact footer line
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(5.5);
+          doc.setTextColor(100, 116, 139);
+          doc.text(`MINAGRI / RAB Traceability · Scanned: ${item.scannedTimeDisplay}`, cardX + 3.5, cardY + cardHeight - 3);
+        }
       }
 
       // Add page numbers at bottom
@@ -2318,7 +2410,9 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
         doc.setFontSize(7);
         doc.setTextColor(148, 163, 184);
         doc.text(
-          `TERIMBERE Rwanda Agri-Track · Batch QR Print Sheet · Page ${p} of ${totalPages} · Exported on ${new Date().toLocaleDateString()}`,
+          forceSingleSheet
+            ? `TERIMBERE Rwanda Agri-Track · Single Printable PDF Sheet (${itemsToPrint.length} Selected Scanned Labels) · Exported on ${new Date().toLocaleDateString()}`
+            : `TERIMBERE Rwanda Agri-Track · Batch QR Print Sheet · Page ${p} of ${totalPages} · Exported on ${new Date().toLocaleDateString()}`,
           pageWidth / 2,
           pageHeight - 5,
           { align: "center" }
@@ -2326,6 +2420,7 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
       }
 
       if (openPreview) {
+        setIsPreviewSingleSheet(Boolean(forceSingleSheet));
         const pdfBlob = doc.output("blob");
         if (previewPdfBlobUrl) {
           URL.revokeObjectURL(previewPdfBlobUrl);
@@ -2354,7 +2449,11 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
         setIsPreviewModalOpen(true);
       } else {
         const todayStr = new Date().toISOString().slice(0, 10);
-        doc.save(`TERIMBERE_Batch_QR_Labels_${todayStr}.pdf`);
+        doc.save(
+          forceSingleSheet
+            ? `TERIMBERE_Single_Sheet_QR_${itemsToPrint.length}_Items_${todayStr}.pdf`
+            : `TERIMBERE_Batch_QR_Labels_${todayStr}.pdf`
+        );
       }
     } catch (err) {
       console.error("Failed to generate batch PDF:", err);
@@ -2384,7 +2483,9 @@ export const QrScannerAndRecordModal: React.FC<QrScannerAndRecordModalProps> = (
     const a = document.createElement("a");
     a.href = previewPdfBlobUrl;
     const todayStr = new Date().toISOString().slice(0, 10);
-    a.download = `TERIMBERE_Batch_QR_Labels_${todayStr}.pdf`;
+    a.download = isPreviewSingleSheet
+      ? `TERIMBERE_Single_Sheet_QR_${previewItems.length}_Items_${todayStr}.pdf`
+      : `TERIMBERE_Batch_QR_Labels_${todayStr}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -4485,8 +4586,45 @@ BATCH-RW-2026-084,harvest,Burera Highland Harvest Lot,Ibirayi (Victoria),Burera,
                     </button>
                   </div>
 
-                  {/* Right: Batch Upload CSV and Sample Simulator Buttons */}
+                  {/* Right: Export Single PDF Sheet, Batch Upload CSV, and Sample Simulator Buttons */}
                   <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isGeneratingBatchPdf}
+                      onClick={() => {
+                        const items =
+                          selectedScanIds.size > 0
+                            ? scanHistory.filter((i) => selectedScanIds.has(i.scanId))
+                            : filteredAndSortedHistory.slice(0, 6);
+                        if (items.length === 0) {
+                          alert(
+                            language === "rw"
+                              ? "Nta bisikano bihari byo gucapa. Banza usikane cyangwa uhitemo umurongo."
+                              : "No scan items available to export. Please select or scan items first."
+                          );
+                          return;
+                        }
+                        generateBatchQrPdf(items, true, true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-black transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                      title={
+                        language === "rw"
+                          ? "Capa ibyasikanywe byatoranyijwe ku rupapuro rumwe rwa PDF"
+                          : "Export multiple selected scanned items into a single printable PDF sheet"
+                      }
+                    >
+                      <Printer className="w-3.5 h-3.5 text-stone-950" />
+                      <span>
+                        {selectedScanIds.size > 0
+                          ? language === "rw"
+                            ? `Capa PDF y'Urupapuro Rumwe (${selectedScanIds.size})`
+                            : `Export Selected to Single PDF Sheet (${selectedScanIds.size})`
+                          : language === "rw"
+                          ? "Capa PDF y'Urupapuro Rumwe"
+                          : "Export to Single PDF Sheet"}
+                      </span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => setIsBatchUploadOpen((prev) => !prev)}
@@ -4750,7 +4888,7 @@ BATCH-RW-2026-084,harvest,Burera Highland Harvest Lot,Ibirayi (Victoria),Burera,
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Primary Button: Open Print Preview Modal Overlay */}
+                    {/* Primary Requested Button: Export Multiple Selected Items to a Single Printable PDF Sheet */}
                     <button
                       type="button"
                       disabled={isGeneratingBatchPdf}
@@ -4758,22 +4896,26 @@ BATCH-RW-2026-084,harvest,Burera Highland Harvest Lot,Ibirayi (Victoria),Burera,
                         const selectedItems = scanHistory.filter((item) =>
                           selectedScanIds.has(item.scanId)
                         );
-                        generateBatchQrPdf(selectedItems, true);
+                        generateBatchQrPdf(selectedItems, true, true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-stone-950 hover:bg-stone-900 text-amber-300 font-extrabold text-xs shadow-sm cursor-pointer disabled:opacity-50 transition-transform active:scale-95"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-stone-950 hover:bg-stone-900 text-amber-300 font-black text-xs shadow-md cursor-pointer disabled:opacity-50 transition-transform active:scale-95 border border-amber-400/40"
+                      title={
+                        language === "rw"
+                          ? `Capa ${selectedScanIds.size} byatoranyijwe ku rupapuro rumwe rwa PDF (Single Sheet)`
+                          : `Export ${selectedScanIds.size} selected items into a single printable PDF sheet`
+                      }
                     >
-                      <Eye className="w-4 h-4 text-emerald-400" />
-                      <Printer className="w-4 h-4" />
+                      <Printer className="w-4 h-4 text-amber-400" />
                       <span>
                         {isGeneratingBatchPdf
-                          ? batchPdfProgress || "Preparing Preview..."
+                          ? batchPdfProgress || "Formatting Single Sheet..."
                           : language === "rw"
-                          ? `Reba Mbere yo Gucapa (${selectedScanIds.size})`
-                          : `Print Preview (${selectedScanIds.size})`}
+                          ? `Capa Urupapuro Rumwe rwa PDF (${selectedScanIds.size})`
+                          : `Export to Single Printable PDF Sheet (${selectedScanIds.size})`}
                       </span>
                     </button>
 
-                    {/* Direct Download PDF Button */}
+                    {/* Direct Download Single Sheet PDF Button */}
                     <button
                       type="button"
                       disabled={isGeneratingBatchPdf}
@@ -4781,13 +4923,34 @@ BATCH-RW-2026-084,harvest,Burera Highland Harvest Lot,Ibirayi (Victoria),Burera,
                         const selectedItems = scanHistory.filter((item) =>
                           selectedScanIds.has(item.scanId)
                         );
-                        generateBatchQrPdf(selectedItems, false);
+                        generateBatchQrPdf(selectedItems, false, true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/15 hover:bg-black/25 text-stone-950 font-bold text-xs cursor-pointer disabled:opacity-50"
-                      title={language === "rw" ? "Kuramo PDF ako kanya" : "Download PDF directly"}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-900/80 hover:bg-stone-900 text-white font-bold text-xs cursor-pointer disabled:opacity-50 border border-stone-800"
+                      title={
+                        language === "rw"
+                          ? "Kuramo ako kanya urupapuro rumwe rwa PDF"
+                          : "Directly download single printable PDF sheet"
+                      }
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>PDF</span>
+                      <Download className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{language === "rw" ? "Kuramo (1 Sheet)" : "Download (1 Sheet)"}</span>
+                    </button>
+
+                    {/* Multi-Page Batch Booklet Preview Button */}
+                    <button
+                      type="button"
+                      disabled={isGeneratingBatchPdf}
+                      onClick={() => {
+                        const selectedItems = scanHistory.filter((item) =>
+                          selectedScanIds.has(item.scanId)
+                        );
+                        generateBatchQrPdf(selectedItems, true, false);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-black/15 hover:bg-black/25 text-stone-950 font-bold text-xs cursor-pointer disabled:opacity-50"
+                      title={language === "rw" ? "Reba impapuro nyinshi (Multi-Page)" : "Multi-Page Booklet Preview"}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{language === "rw" ? "Paji Nyinshi" : "Multi-Page"}</span>
                     </button>
 
                     <button
@@ -5665,14 +5828,24 @@ BATCH-RW-2026-084,harvest,Burera Highland Harvest Lot,Ibirayi (Victoria),Burera,
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-                      {language === "rw" ? "Igaragaza ryo Gucapa (Print Preview)" : "Print Layout Verification"}
+                      {isPreviewSingleSheet
+                        ? language === "rw"
+                          ? "Urupapuro Rumwe rwa PDF (Single Sheet)"
+                          : "Single Printable PDF Sheet"
+                        : language === "rw"
+                        ? "Igaragaza ryo Gucapa (Print Preview)"
+                        : "Print Layout Verification"}
                     </span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-900 border border-emerald-700 text-emerald-200">
-                      A4 Standard · 300 DPI
+                      {isPreviewSingleSheet ? "1 Page A4 · 300 DPI Fitted" : "A4 Standard · 300 DPI"}
                     </span>
                   </div>
                   <h3 className="text-base font-black">
-                    {language === "rw"
+                    {isPreviewSingleSheet
+                      ? language === "rw"
+                        ? `Urupapuro Rumwe rwa PDF (${previewItems.length} Byatoranyijwe · Paji 1)`
+                        : `Single Printable PDF Sheet (${previewItems.length} Selected Records · 1 Page)`
+                      : language === "rw"
                       ? `Reba Kopi za QR mbere yo Gucapa (${previewItems.length} zatoranyijwe)`
                       : `Batch QR Code Print Preview (${previewItems.length} records · ${previewTotalPages} page${previewTotalPages > 1 ? "s" : ""})`}
                   </h3>
